@@ -1,0 +1,159 @@
+---
+title: "PracticalMachineLearningProject_March2015"
+author: "Luis M78"
+date: "Saturday, March 21, 2015"
+output: html_document
+---
+
+For this project, it is very important to remove features that do not matter for the classification problem. First it is necesarry to remove data columns not needed, the str function is used to have a glimpse of the variables contents, like shown below. Variables that appear not to be measurements are removed.
+
+```{r, cache=TRUE}
+setwd("C:/Users/Luis Miguel/Dropbox/Data Specialization JHU/PracticalMachineLearning/Final_project_Machine")
+data_training <- read.csv("pml-training.csv",na.strings="NA")
+str(data_training)
+removecolumns <- c("X","user_name","raw_timestamp_part_2","cvtd_timestamp","new_window","num_window")
+
+```
+
+Then, after defining a vector with the columns that are not neded we remove it like so
+
+```{r}
+data_training2 <- data_training[,-c(as.factor(removecolumns))]
+data_training2$num_window <- NULL
+columns <- dim(data_training2)[2]
+```
+The new data set has `r columns` columns.
+Now we load the caret package, and we will remove variables that have near zero variance.
+Also columns that have a lot of NAs
+```{r}
+library(caret)
+nzv <- nearZeroVar(data_training2)
+filteredTraining <- data_training2[,-nzv]
+dim(filteredTraining)[2]
+# now there are 94 
+filteredTraining2 <-filteredTraining[ , colSums(is.na(filteredTraining)) <= nrow(filteredTraining)*0.5]
+columnsb <- dim(filteredTraining2)[2]
+```
+Now we have `r columnsb` columns. THe computer will need less memory and time to fit the machine learning models.
+Now we proceed to split the training data into traning and test set. Also helps in the processing because there are less entries.
+
+```{r}
+set.seed(3000)
+inTrain <- createDataPartition(y=filteredTraining2$classe,p=0.75,list=FALSE)
+ 
+training <- filteredTraining2[inTrain,]
+testing <-  filteredTraining2[-inTrain,]
+
+dim(training)
+dim(testing)
+```
+Now we proceed to fit the models. I am also timing the models for comparision
+
+```{r}
+ptm <- proc.time()
+set.seed(3000)
+myControl <- trainControl(method='cv',number=2,repeats=2,verboseIter = TRUE)
+modelFit <- train(classe~.,method="rf",data=training,ntrees=100, trControl=myControl)
+summary(modelFit$finalModel)
+print(modelFit)
+t1 <- proc.time()-ptm
+```
+The model required `r t1` seconds to process. I am working with an old laptop with 3gb of RAM and an intel processor T5450. In my office work desktop PC the model took much less time.
+Now we list and plot the variables importance for the model
+```{r}
+varImp(modelFit,scale=FALSE)
+#plotting the variable importance
+plot(varImp(modelFit,scale=TRUE))
+# plotting the  corss validation accuracy 
+plot(modelFit)
+```
+
+Now we test the model with the testing partition from before
+```{r}
+dim(testing)
+set.seed(3000)
+prediction_1 <-predict(modelFit,newdata=testing)
+
+accuracyper <- sum(testing$class==prediction_1)/dim(testing)[1]*100
+```
+The accuracy on the test set is `r accuracyper` Which is very good.
+
+For intra model comparison we weill fit a random forest model using the random forest package.
+
+```{r}
+library(randomForest)
+ptm <- proc.time()
+set.seed(3000)
+modelRandomForest <- randomForest(classe~., data= training,ntree=200)
+#modelRandomForest <- randomForest(classe~., data= filteredTraining2,proximity=TRUE)
+t2 <-proc.time()-ptm
+modelRandomForest
+```
+
+The model took `r t2` seconds to execute. Much faster than the previous model.
+Here below is a plot of the model
+```{r}
+plot(modelRandomForest)
+```
+
+Finally a third model is developed
+```{r}
+ptm <- proc.time()
+set.seed(3000)
+myControl <- trainControl(method='cv',number=2,repeats=2,verboseIter = TRUE)
+modelGbm <- train(classe~.,method="gbm",data=training,trControl=myControl)
+t3 <- proc.time()-ptm
+```
+This model needed `r t3` seconds to compute. 
+
+Finally we test the last two models in the testing partition set.
+
+```{r}
+set.seed(3000)
+prediction_2 <-predict(modelRandomForest,newdata=testing)
+
+accuracyper2 <- sum(testing$class==prediction_2)/dim(testing)[1]*100
+# 100 % accuracy
+set.seed(3000)
+prediction_3 <-predict(modelGbm,newdata=testing)
+
+accuracyper3 <-sum(testing$class==prediction_3)/dim(testing)[1]*100
+# 96.207 % accuracy
+
+```
+
+The models had `r accuracyper2` and `r accuracyper3` respectively. The random forest model seems better than the gbm model.
+
+Finally, we compare the models predictions wih the small test set given by the professor for submission online.
+
+```{r}
+
+testing2 <- read.csv("pml-testing.csv",na.strings="NA")
+# Predicting with the 3 models
+predictions1a <- predict(modelFit, newdata=testing2)
+predictions2a <- predict(modelRandomForest, newdata=testing2)
+predictions3a <- predict(modelGbm , newdata=testing2)
+
+# comparing the predictions among themselves
+
+sum(predictions2a == predictions1a) # The two predictions are the same
+
+sum(predictions3a == predictions1a)
+```
+
+Then, we write the separate answers using the script provided
+
+```{r}
+results <- as.vector(predictions3a)
+
+pml_write_files = function(x) {
+        n = length(x)
+        for (i in 1:n) {
+                filename = paste0("problem_id_", i, ".txt")
+                write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, 
+                            col.names = FALSE)
+        }
+}
+
+pml_write_files(results)
+```
