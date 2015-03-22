@@ -59,7 +59,7 @@ print(modelFit)
 t1 <- proc.time()-ptm
 ```
 The model required `r t1` seconds to process. I am working with an old laptop with 3gb of RAM and an intel processor T5450. In my office work desktop PC the model took much less time.
-Now we list and plot the variables importance for the model
+Now we list and plot the variables importance for the model. The cross validation error can be appreciated in the plot.
 ```{r}
 varImp(modelFit,scale=FALSE)
 #plotting the variable importance
@@ -122,6 +122,7 @@ accuracyper3 <-sum(testing$class==prediction_3)/dim(testing)[1]*100
 
 ```
 
+The out of sample errors are very small, as seen in the prediction. 
 The models had `r accuracyper2` and `r accuracyper3` respectively. The random forest model seems better than the gbm model.
 
 Finally, we compare the models predictions wih the small test set given by the professor for submission online.
