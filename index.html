@@ -511,7 +511,7 @@ prediction_3 &lt;-predict(modelGbm,newdata=testing)
 
 accuracyper3 &lt;-sum(testing$class==prediction_3)/dim(testing)[1]*100
 # 96.207 % accuracy</code></pre>
-<p>The out of sample errors are very small, as seen in the prediction. The models had 99.367863 and 96.2071778 respectively. The random forest model seems better than the gbm model.</p>
+<p>The out of sample errors are very small, as seen in the prediction. The models had 99.367863 and 96.2071778 accuracy respectively. The random forest model seems better than the gbm model.</p>
 <p>Finally, we compare the models predictions wih the small test set given by the professor for submission online.</p>
 <pre class="r"><code>testing2 &lt;- read.csv(&quot;pml-testing.csv&quot;,na.strings=&quot;NA&quot;)
 # Predicting with the 3 models
